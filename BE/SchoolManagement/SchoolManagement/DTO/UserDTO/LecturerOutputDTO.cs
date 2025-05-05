@@ -1,4 +1,4 @@
-﻿namespace SchoolManagement.DTO.Output
+﻿namespace SchoolManagement.DTO.UserDTO
 {
     public class LecturerOutputDTO
     {

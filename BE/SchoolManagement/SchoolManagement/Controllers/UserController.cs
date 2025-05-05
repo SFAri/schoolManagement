@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using SchoolManagement.DTO;
+using SchoolManagement.DTO.UserDTO;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -43,7 +43,8 @@ namespace SchoolManagement.Controllers
                 Email = registerDto.Email,
                 FirstName= registerDto.FirstName,
                 LastName= registerDto.LastName,
-                RoleId = registerDto.RoleType
+                RoleId = registerDto.RoleType,
+                DOB = DateTime.Today
             };
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
@@ -124,11 +125,14 @@ namespace SchoolManagement.Controllers
                 user.Email,
                 user.FirstName,
                 user.LastName,
-                user.RoleId
+                RoleName = user.RoleId,
+                user.DOB,
+                user.Gender
             });
         }
 
         // Lấy thông tin người dùng
+        [AllowAnonymous] // Just for test
         [HttpGet("all")]
         public async Task<ActionResult< IEnumerable<UserAllDTO>>> GetAllUser()
         {
@@ -139,6 +143,8 @@ namespace SchoolManagement.Controllers
                     LastName = u.LastName,
                     Email = u.Email,
                     RoleName = u.RoleId,
+                    Gender = u.Gender,
+                    DOB = u.DOB
                 })
                 .ToListAsync();
 
@@ -147,15 +153,48 @@ namespace SchoolManagement.Controllers
             return Ok(users); 
         }
 
+        // Get all lecturer:
+        [AllowAnonymous] // Just for test
+        [HttpGet("all-lecturer")]
+        public async Task<ActionResult<IEnumerable<UserAllDTO>>> GetAllLecturer()
+        {
+            var users = await _userManager.Users
+                .Where(u => u.RoleId == RoleType.Lecturer)
+                .Select(u => new UserAllDTO
+                {
+                    Id = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    RoleName = u.RoleId,
+                })
+                .ToListAsync();
+
+            if (users.Count == 0) return NotFound();
+
+            return Ok(users);
+        }
+
         // Lấy thông tin người dùng
+        [AllowAnonymous] // Just for test
         [HttpGet("{id}")]
-        public async Task<ActionResult<User>> GetUser(string id)
+        public async Task<ActionResult<UserAllDTO>> GetUser(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
-
             if (user == null) return NotFound();
+            var userOutput = new UserAllDTO
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                DOB = user.DOB,
+                Gender = user.Gender,
+                Email = user.Email,
+                Id = user.Id,
+                RoleName = user.RoleId
+            };
+            
 
-            return user; // Trả về thông tin người dùng
+            return userOutput; // Trả về thông tin người dùng
         }
 
         // Cập nhật thông tin người dùng

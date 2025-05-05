@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SchoolManagement.DTO;
+using SchoolManagement.DTO.RoleDTO;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers

@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagement.DTO;
-using SchoolManagement.DTO.Input;
-using SchoolManagement.DTO.Output;
+using SchoolManagement.DTO.CourseDTO;
+using SchoolManagement.DTO.ShiftDTO;
+using SchoolManagement.DTO.UserDTO;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -28,16 +30,17 @@ namespace SchoolManagement.Controllers
 
         // GET: api/Courses
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CourseOutputGetDTO>>> GetCourses(int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult<IEnumerable<CourseOutputGetDTO>>> GetCourses(int pageNumber = 1, int pageSize = 10, CancellationToken cancellationToken = default)
         {
           if (_context.Courses == null)
           {
               return NotFound();
           }
+            var totalCourses = await _context.Courses.CountAsync();
             var courses = await _context.Courses
                   .OrderBy(c => c.CourseId)
-                  .Skip((pageNumber - 1) * pageSize)
-                  .Take(pageSize)
+                  //.Skip((pageNumber - 1) * pageSize)
+                  //.Take(pageSize)
                   .Include(c => c.Lecturer) 
                   .Include(c => c.Shifts)
                   //.Include(c => c.Scores)     
@@ -67,14 +70,14 @@ namespace SchoolManagement.Controllers
                       //})
                       .ToList() // Lấy danh sách điểm số
                   })
-                  .ToListAsync();
+                  .ToListAsync(cancellationToken);
 
-            return Ok(courses);
+            return Ok(new { data = courses, totalCount = totalCourses });
         }
 
         // GET: api/Courses/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<CourseOutputGetDTO>> GetCourse([FromRoute] int id)
+        public async Task<ActionResult<CourseOutputGetDTO>> GetCourse(int id, CancellationToken cancellationToken = default)
         {
           if (_context.Courses == null)
           {
@@ -102,7 +105,8 @@ namespace SchoolManagement.Controllers
                 {
                     ShiftId = s.ShiftId,
                     WeekDay = s.WeekDay,
-                    ShiftOfDay = s.ShiftCode
+                    ShiftOfDay = s.ShiftCode,
+                    MaxQuantity = s.MaxQuantity
                 }).ToList(), // Chọn các thuộc tính mà bạn muốn từ Shift
 
                 //Scores = c.Scores.Select(sc => new ScoreDTO
@@ -113,22 +117,28 @@ namespace SchoolManagement.Controllers
                 //    UpdatedAt = sc.LastUpdatedAt
                 //}).ToList() // Chọn các thuộc tính mà bạn muốn từ Score
             })
-            .FirstOrDefaultAsync(); // Lấy một khóa học đầu tiên (hoặc null)
+            .FirstOrDefaultAsync(cancellationToken); // Lấy một khóa học đầu tiên (hoặc null)
 
             if (course == null)
             {
                 return NotFound();
             }
 
-            return Ok(course);
+            return course;
         }
 
         // PATCH: api/Courses/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        //[Authorize(Roles = "Admin")]
         [HttpPatch("{id}")]
-        public async Task<ActionResult<CourseDTO>> PatchCourse([FromRoute]int id, [FromBody]CourseDTO courseDTO)
+        public async Task<ActionResult<CourseOutputGetDTO>> PatchCourse([FromRoute]int id, [FromBody] CoursePatchInputDTO courseDTO, CancellationToken cancellationToken = default)
         {
+            if (courseDTO == null)
+            {
+                return BadRequest();
+            }
             var course = await _context.Courses.FindAsync(id);
+            Console.WriteLine("=========== FINDDDDD: ", course);
             if (course == null)
             {
                 return NotFound();
@@ -139,7 +149,7 @@ namespace SchoolManagement.Controllers
             {
                 course.CourseName = courseDTO.CourseName;
             }
-            if (courseDTO.StartDate.HasValue)
+            if (courseDTO.StartDate != null)
             {
                 course.StartDate = (DateTime)courseDTO.StartDate;
             }
@@ -151,12 +161,27 @@ namespace SchoolManagement.Controllers
             {
                 course.LecturerId = courseDTO.LecturerId;
             }
+            if (courseDTO.Shifts != null)
+            {
+                foreach (var item in _context.Shifts.Where(s => s.CourseId == course.CourseId ))
+                {
+                    _context.Shifts.Remove(item);
+                }
+                await _context.SaveChangesAsync(cancellationToken);
+                course.Shifts = courseDTO.Shifts.Select(s => new Shift
+                {
+                    WeekDay = s.WeekDay,
+                    ShiftCode = s.ShiftCode,
+                    MaxQuantity = s.MaxQuantity,
+                    CourseId = course.CourseId
+                }).ToList();
+            }
 
             _context.Entry(course).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -170,15 +195,22 @@ namespace SchoolManagement.Controllers
                 }
             }
 
-            courseDTO.CourseId = course.CourseId;
-            return CreatedAtAction("GetCourse", new { id = course.CourseId }, course);
+            var courseOutput = await GetCourse(course.CourseId, cancellationToken); // Gọi tới phương thức GetCourse
+            if (courseOutput.Result is NotFoundResult) // Kiểm tra nếu không tìm thấy
+            {
+                return NotFound(); // Trả về không tìm thấy
+            }
+
+            return CreatedAtAction("GetCourse", new { id = course.CourseId }, courseOutput.Value);
         }
 
         // POST: api/Courses
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        //[Authorize(Roles = "Admin")]
         [HttpPost]
-        public async Task<ActionResult<CourseOutputGetDTO>> PostCourse([FromBody]CoursePostInputDTO courseDTO)
+        public async Task<ActionResult<CourseOutputGetDTO>> PostCourse(CoursePostInputDTO courseDTO, CancellationToken cancellationToken = default)
         {
+            Console.WriteLine("CourseDTO: " + courseDTO.ToString());
           if (_context.Courses == null)
           {
               return Problem("Entity set 'SchoolContext.Courses'  is null.");
@@ -191,13 +223,12 @@ namespace SchoolManagement.Controllers
                 LecturerId = courseDTO.LecturerId
             };
             _context.Courses.Add(course);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
-            if (courseDTO.Shifts != null && courseDTO.Shifts.Count > 0)
+            if (courseDTO.Shifts != null && courseDTO.Shifts.Count >= 2)
             {
                 foreach (var shift in courseDTO.Shifts)
                 {
-                    // Giả định rằng có một thực thể Shift có mối quan hệ với Course
                     var courseShift = new Shift
                     {
                         CourseId = course.CourseId,
@@ -205,36 +236,17 @@ namespace SchoolManagement.Controllers
                         WeekDay = shift.WeekDay,
                         MaxQuantity = shift.MaxQuantity | 25
                     };
-                    _context.Shifts.Add(courseShift); // Thêm shift vào mối quan hệ khóa học
+                    _context.Shifts.Add(courseShift);
                 }
 
-                await _context.SaveChangesAsync(); // Lưu các shift đã thêm
+                await _context.SaveChangesAsync(cancellationToken); 
+            }
+            else
+            {
+                return BadRequest("Shifts must not null and have more than or equal to 2 shifts");
             }
 
-            //var courseOutput =
-            //// await GetCourse(course.CourseId);
-            //new CourseOutputGetDTO
-            //{
-            //    CourseId = course.CourseId,
-            //    CourseName = course.CourseName,
-            //    StartDate = course.StartDate,
-            //    EndDate = course.EndDate,
-            //    Lecturer = new LecturerOutputDTO
-            //    {
-            //        Email = course.Lecturer?.Email,
-            //        LecturerId = course.Lecturer?.Id,
-            //        LecturerName = course.Lecturer?.FirstName + ' ' + course.Lecturer?.LastName,
-            //    },
-            //    Shifts = course.Shifts?.Select(s => new ShiftOutputCourseDTO
-            //    {
-            //        ShiftId = s.ShiftId,
-            //        WeekDay = s.WeekDay,
-            //        ShiftOfDay = s.ShiftCode
-            //    }).ToList()
-            //};
-
-            //return CreatedAtAction("GetCourse", new { id = course.CourseId }, courseOutput);
-            var courseOutput = await GetCourse(course.CourseId); // Gọi tới phương thức GetCourse
+            var courseOutput = await GetCourse(course.CourseId, cancellationToken); // Gọi tới phương thức GetCourse
             if (courseOutput.Result is NotFoundResult) // Kiểm tra nếu không tìm thấy
             {
                 return NotFound(); // Trả về không tìm thấy
@@ -245,7 +257,7 @@ namespace SchoolManagement.Controllers
 
         // DELETE: api/Courses/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCourse(int id)
+        public async Task<IActionResult> DeleteCourse([FromRoute]int id, CancellationToken cancellationToken = default)
         {
             if (_context.Courses == null)
             {
@@ -258,7 +270,7 @@ namespace SchoolManagement.Controllers
             }
 
             _context.Courses.Remove(course);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return NoContent();
         }

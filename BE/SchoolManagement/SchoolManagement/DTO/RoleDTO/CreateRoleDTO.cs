@@ -1,4 +1,4 @@
-﻿namespace SchoolManagement.DTO
+﻿namespace SchoolManagement.DTO.RoleDTO
 {
     public class CreateRoleDTO
     {

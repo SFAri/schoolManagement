@@ -1,12 +1,10 @@
 ﻿using SchoolManagement.Models;
 
-namespace SchoolManagement.DTO
+namespace SchoolManagement.DTO.ShiftDTO
 {
-    public class ShiftDTO
+    public class ShiftOutputDTO
     {
         public int? ShiftId { get; set; }
-        //public string? ShiftName { get; set; }
-        public int? CourseId { get; set; }
         public string? CourseName { get; set; }
         public ShiftOfDay? ShiftCode { get; set; }
         public WeekDay? Weekday { get; set; }

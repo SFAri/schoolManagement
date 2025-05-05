@@ -1,6 +1,6 @@
 ﻿using SchoolManagement.Models;
 
-namespace SchoolManagement.DTO.Input
+namespace SchoolManagement.DTO.ShiftDTO
 {
     public class ShiftInputDTO
     {

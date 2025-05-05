@@ -7,8 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagement.DTO;
-using SchoolManagement.DTO.Input;
-using SchoolManagement.DTO.Output;
+using SchoolManagement.DTO.ShiftDTO;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -26,19 +25,18 @@ namespace SchoolManagement.Controllers
 
         // GET: api/Shifts
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ShiftDTO>>> GetShifts(int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult<IEnumerable<ShiftAllDTO>>> GetShifts(int pageNumber = 1, int pageSize = 10)
         {
             var shifts = await _context.Shifts
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Include(s => s.Course)
                 .AsSplitQuery()
-                .Select(s => new ShiftDTO
+                .Select(s => new ShiftAllDTO
                 {
                     ShiftId = s.ShiftId,
                     CourseId = s.CourseId,
                     CourseName = s.Course.CourseName,
-                    //ShiftName = s.ShiftName,
                     Weekday = s.WeekDay,
                     ShiftCode = s.ShiftCode,
                     MaxQuantity = s.MaxQuantity
@@ -79,18 +77,13 @@ namespace SchoolManagement.Controllers
         // PATCH: api/Shifts/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPatch("{id}")]
-        public async Task<ActionResult<ShiftOutputDTO>> PatchShift(int id, [FromBody] ShiftDTO shiftDTO)
+        public async Task<ActionResult<ShiftOutputDTO>> PatchShift(int id, [FromBody] ShiftAllDTO shiftDTO)
         {
             var shift = await _context.Shifts.FindAsync(id);
             if (shift== null)
             {
                 return NotFound();
             }
-
-            //if (shiftDTO.ShiftName != null)
-            //{
-            //    shift.ShiftName = shiftDTO.ShiftName;
-            //}
             if (shiftDTO.ShiftCode.HasValue)
             {
                 shift.ShiftCode = (ShiftOfDay)shiftDTO.ShiftCode;
@@ -139,14 +132,17 @@ namespace SchoolManagement.Controllers
           {
               return Problem("Entity set 'SchoolContext.Shifts'  is null.");
           }
-            var shift = new Shift
-            {
-                ShiftCode = shiftDTO.ShiftOfDay,
-                CourseId = shiftDTO.CourseId,
-                WeekDay = shiftDTO.WeekDay,
-                MaxQuantity = 30 //default number
-            };
-            
+            var shift = await _context.Shifts
+                .Include(s => s.Course)
+                .Select(s => new Shift
+                {
+                    ShiftCode = shiftDTO.ShiftOfDay,
+                    CourseId = shiftDTO.CourseId,
+                    WeekDay = shiftDTO.WeekDay,
+                    MaxQuantity = 30 //default number
+                }).FirstOrDefaultAsync();
+
+
             _context.Shifts.Add(shift);
             await _context.SaveChangesAsync();
 

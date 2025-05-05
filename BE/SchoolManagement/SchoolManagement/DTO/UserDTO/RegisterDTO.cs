@@ -1,6 +1,6 @@
 ﻿using SchoolManagement.Models;
 
-namespace SchoolManagement.DTO
+namespace SchoolManagement.DTO.UserDTO
 {
     public class RegisterDTO
     {

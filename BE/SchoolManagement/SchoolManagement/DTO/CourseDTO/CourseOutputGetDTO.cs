@@ -1,4 +1,7 @@
-﻿namespace SchoolManagement.DTO.Output
+﻿using SchoolManagement.DTO.ShiftDTO;
+using SchoolManagement.DTO.UserDTO;
+
+namespace SchoolManagement.DTO.CourseDTO
 {
     public class CourseOutputGetDTO
     {

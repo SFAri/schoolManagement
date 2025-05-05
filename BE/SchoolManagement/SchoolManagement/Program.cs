@@ -26,7 +26,14 @@ builder.Services.AddDbContext<SchoolContext>(opt => opt.UseSqlServer(
 
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<SchoolContext>()
+    .AddRoles<IdentityRole>()
     .AddDefaultTokenProviders();
+
+//builder.Services.AddAuthorization(options =>
+//{
+//    options.AddPolicy("RequireAdminRole",
+//         policy => policy.RequireRole("Admin"));
+//});
 
 // Cấu hình JWT
 builder.Services.AddAuthentication(options =>
