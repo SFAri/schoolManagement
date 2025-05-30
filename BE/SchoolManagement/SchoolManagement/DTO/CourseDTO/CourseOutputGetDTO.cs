@@ -1,4 +1,5 @@
-﻿using SchoolManagement.DTO.ShiftDTO;
+﻿using SchoolManagement.DTO.ScoreDTO;
+using SchoolManagement.DTO.ShiftDTO;
 using SchoolManagement.DTO.UserDTO;
 
 namespace SchoolManagement.DTO.CourseDTO
@@ -11,5 +12,7 @@ namespace SchoolManagement.DTO.CourseDTO
         public DateTime? EndDate { get; set; }
         public LecturerOutputDTO? Lecturer { get; set; }
         public List<ShiftOutputCourseDTO>? Shifts { get; set; }
+        public List<ScoreOuputDTO>? Scores { get; set; }
+
     }
 }

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SchoolManagement.DTO.EnrollmentDTO;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -83,30 +85,28 @@ namespace SchoolManagement.Controllers
         // POST: api/Enrollments
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Enrollment>> PostEnrollment(Enrollment enrollment)
+        public async Task<IActionResult> PostEnrollment(EnrollmentInputPostDTO enrollmentDTO, CancellationToken cancellationToken = default)
         {
           if (_context.Enrollments == null)
           {
               return Problem("Entity set 'SchoolContext.Enrollments'  is null.");
           }
-            _context.Enrollments.Add(enrollment);
-            try
+            foreach (var item in enrollmentDTO.ShiftId)
             {
-                await _context.SaveChangesAsync();
+                // Kiểm tra điều kiện là trong enrollmentDTO có thằng shift nào có userId giống vs ng dùng hiện tại mà trùng shiftOfDay và WeekDay không, nếu ko tồn tại thằng nào thì mới thêm các shift đó vào enrollment. 
+                // Sau đó kiểm tra số lượng enrollment mà có shiftId đã vượt qua maxQuantity của shift đó chưa => nếu chưa thì mới add, nếu có bất kỳ cái nào đã vượt maxQuantity thì return BadRequest()
             }
-            catch (DbUpdateException)
-            {
-                if (EnrollmentExists(enrollment.UserId))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            //var enrollment = new Enrollment
+            //{
+            //    UserId = enrollmentDTO.UserId,
+            //    ShiftId = enrollmentDTO.ShiftId,
+            //    TimeJoined = DateTime.Now,
+            //};
 
-            return CreatedAtAction("GetEnrollment", new { id = enrollment.UserId }, enrollment);
+            //_context.Enrollments.Add(enrollment);
+            //await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok();
         }
 
         // DELETE: api/Enrollments/5

@@ -13,7 +13,7 @@ namespace SchoolManagement.Models
 
         //foreign
         public virtual User? Lecturer { get; set; } // Lecturer
-        public virtual IList<Score>? Scores { get; set; }
+        public virtual ICollection<Score>? Scores { get; set; }
         public virtual ICollection<Shift>? Shifts { get; set; }
     }
 }

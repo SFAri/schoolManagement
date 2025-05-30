@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchoolManagement.Models;
 
@@ -11,9 +12,10 @@ using SchoolManagement.Models;
 namespace SchoolManagement.Migrations
 {
     [DbContext(typeof(SchoolContext))]
-    partial class SchoolContextModelSnapshot : ModelSnapshot
+    [Migration("20250521070224_ScoreModel_Modified_Columns")]
+    partial class ScoreModel_Modified_Columns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -223,9 +225,6 @@ namespace SchoolManagement.Migrations
 
                     b.Property<float>("Final")
                         .HasColumnType("real");
-
-                    b.Property<int>("Grade")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("LastUpdatedAt")
                         .HasColumnType("datetime2");

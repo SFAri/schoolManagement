@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing.Printing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +15,7 @@ using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
 {
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Route("api/[controller]")]
     [ApiController]
     public class ShiftsController : ControllerBase
@@ -21,28 +25,6 @@ namespace SchoolManagement.Controllers
         public ShiftsController(SchoolContext context)
         {
             _context = context;
-        }
-
-        // GET: api/Shifts
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<ShiftAllDTO>>> GetShifts(int pageNumber = 1, int pageSize = 10)
-        {
-            var shifts = await _context.Shifts
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .Include(s => s.Course)
-                .AsSplitQuery()
-                .Select(s => new ShiftAllDTO
-                {
-                    ShiftId = s.ShiftId,
-                    CourseId = s.CourseId,
-                    CourseName = s.Course.CourseName,
-                    Weekday = s.WeekDay,
-                    ShiftCode = s.ShiftCode,
-                    MaxQuantity = s.MaxQuantity
-                }).ToListAsync();
-
-            return Ok(shifts);
         }
 
         // GET: api/Shifts/5
@@ -125,6 +107,7 @@ namespace SchoolManagement.Controllers
 
         // POST: api/Shifts
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [Authorize(Policy = "RequireAdminRole")]
         [HttpPost]
         public async Task<ActionResult<ShiftOutputDTO>> PostShift(ShiftInputDTO shiftDTO)
         {
@@ -132,31 +115,67 @@ namespace SchoolManagement.Controllers
           {
               return Problem("Entity set 'SchoolContext.Shifts'  is null.");
           }
-            var shift = await _context.Shifts
-                .Include(s => s.Course)
-                .Select(s => new Shift
-                {
-                    ShiftCode = shiftDTO.ShiftOfDay,
-                    CourseId = shiftDTO.CourseId,
-                    WeekDay = shiftDTO.WeekDay,
-                    MaxQuantity = 30 //default number
-                }).FirstOrDefaultAsync();
-
-
-            _context.Shifts.Add(shift);
-            await _context.SaveChangesAsync();
-
-            var outputShift = new ShiftOutputDTO
+            var course = await _context.Courses.Include(c => c.Shifts).FirstOrDefaultAsync(c => c.CourseId == shiftDTO.CourseId);
+            Console.WriteLine("=========== FINDDDDD: " + course.CourseName);
+            if (course == null)
             {
-                ShiftId = shift.ShiftId,
-                Weekday = shift.WeekDay,
-                CourseName = shift.Course.CourseName,
-                MaxQuantity = shift.MaxQuantity,
-                ShiftCode = shift.ShiftCode,
-            };
+                return NotFound();
+            }
 
-            //shiftDTO.CourseName = shift.Course.CourseName;
-            return CreatedAtAction("GetShift", new { id = shift.ShiftId }, outputShift);
+            var overlappingCourses = await _context.Courses
+                    .Where(c => c.CourseId != shiftDTO.CourseId &&
+                                c.LecturerId == course.LecturerId &&
+                                c.StartDate < course.EndDate &&
+                                c.EndDate > course.StartDate)
+                    .Select(c => c.CourseId)
+                    .ToListAsync();
+            Console.WriteLine("== === LECTURERID: " + course.LecturerId);
+            Console.WriteLine("== === OVERLAP COURSE: " + string.Join(", ", overlappingCourses.Select(c => c)));
+            //Console.WriteLine("== === shift: " + string.Join(", ", shifts.Select(s => s.ShiftCode)));
+
+            if (overlappingCourses.Any())
+            {
+                // Lấy các shifts của các khóa học trùng thời gian
+                var overlappingShifts = await _context.Shifts
+                    .Where(s => overlappingCourses.Contains(s.CourseId))
+                    .Select(s => new { s.WeekDay, s.ShiftCode })
+                    .ToListAsync();
+
+                var shiftKeySet = new HashSet<string>(overlappingShifts.Select(s => $"{(int)s.WeekDay}-{(int)s.ShiftCode}"));
+                Console.WriteLine("== === shift key set: " + string.Join(", ", shiftKeySet.Select(s => s)));
+                var key = $"{(int)shiftDTO.WeekDay}-{(int)shiftDTO.ShiftOfDay}";
+                Console.WriteLine("== KEY NÈ: " + key);
+                if (shiftKeySet.Contains(key))
+                {
+                    return BadRequest($"Shift at: {shiftDTO.WeekDay} with time: {shiftDTO.ShiftOfDay} exists in another course of this lecturer.");
+                }
+            }
+
+            //var shift = await _context.Shifts
+            //    .Include(s => s.Course)
+            //    .Select(s => new Shift
+            //    {
+            //        ShiftCode = shiftDTO.ShiftOfDay,
+            //        CourseId = shiftDTO.CourseId,
+            //        WeekDay = shiftDTO.WeekDay,
+            //        MaxQuantity = shiftDTO.maxQuantity ?? 25
+            //    }).FirstOrDefaultAsync();
+
+
+            //_context.Shifts.Add(shift);
+            //await _context.SaveChangesAsync();
+
+            //var outputShift = new ShiftOutputDTO
+            //{
+            //    ShiftId = shift.ShiftId,
+            //    Weekday = shift.WeekDay,
+            //    CourseName = shift.Course?.CourseName,
+            //    MaxQuantity = shift.MaxQuantity,
+            //    ShiftCode = shift.ShiftCode,
+            //};
+
+            //return CreatedAtAction("GetShift", new { id = shift.ShiftId }, outputShift);
+            return Ok("PASS ALL");
         }
 
         // DELETE: api/Shifts/5
@@ -171,6 +190,16 @@ namespace SchoolManagement.Controllers
             if (shift == null)
             {
                 return NotFound();
+            }
+
+            // Kiểm tra số lượng shifts thuộc courseId đang muốn xóa
+            var courseId = shift.CourseId; 
+            var shiftCount = await _context.Shifts.CountAsync(s => s.CourseId == courseId);
+
+            // Nếu số lượng shifts còn lại (bao gồm cả shift đang muốn xóa) là 2 thì không cho phép xóa
+            if (shiftCount <= 2)
+            {
+                return BadRequest("Cannot delete this shift. At least 2 shifts must remain for this course.");
             }
 
             _context.Shifts.Remove(shift);

@@ -2,7 +2,7 @@
 {
     public class Enrollment
     {
-        public int EnrollmentId { get; set; }
+        //public int EnrollmentId { get; set; }
         public DateTime TimeJoined { get; set; }
 
         //Foreign

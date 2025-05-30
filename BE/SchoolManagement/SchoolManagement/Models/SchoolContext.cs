@@ -8,21 +8,21 @@ namespace SchoolManagement.Models
 {
     public class SchoolContext : IdentityDbContext<User>
     {
-        private readonly IConfiguration _configuration;
-        private IDbConnection DbConnection { get; }
-        public SchoolContext(DbContextOptions<SchoolContext> options, IConfiguration configuration)
+        //private readonly IConfiguration _configuration;
+        //private IDbConnection DbConnection { get; }
+        public SchoolContext(DbContextOptions<SchoolContext> options)
         : base(options)
         {
-            this._configuration = configuration;
-            DbConnection = new SqlConnection(this._configuration.GetConnectionString("DevConnection"));
+            //this._configuration = configuration;
+            //DbConnection = new SqlConnection(this._configuration.GetConnectionString("DevConnection"));
         }
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseSqlServer(DbConnection.ToString());
-            }
-        }
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+        //    if (!optionsBuilder.IsConfigured)
+        //    {
+        //        optionsBuilder.UseSqlServer(_configuration.GetConnectionString("DevConnection"));
+        //    }
+        //}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

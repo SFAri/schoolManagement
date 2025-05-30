@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchoolManagement.Models;
 
@@ -11,9 +12,10 @@ using SchoolManagement.Models;
 namespace SchoolManagement.Migrations
 {
     [DbContext(typeof(SchoolContext))]
-    partial class SchoolContextModelSnapshot : ModelSnapshot
+    [Migration("20250521022847_Score_Enrollment_Modified")]
+    partial class Score_Enrollment_Modified
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -215,28 +217,13 @@ namespace SchoolManagement.Migrations
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
-                    b.Property<float>("AverageScore")
-                        .HasColumnType("real");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<float>("Final")
-                        .HasColumnType("real");
-
-                    b.Property<int>("Grade")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("LastUpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<float>("Midterm")
-                        .HasColumnType("real");
-
-                    b.Property<float>("Process1")
-                        .HasColumnType("real");
-
-                    b.Property<float>("Process2")
+                    b.Property<float>("ScoreNum")
                         .HasColumnType("real");
 
                     b.HasKey("UserId", "CourseId");

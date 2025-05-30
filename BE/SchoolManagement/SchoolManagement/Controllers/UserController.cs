@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SchoolManagement.DTO.CourseDTO;
+using SchoolManagement.DTO.ScoreDTO;
 using SchoolManagement.DTO.UserDTO;
 using SchoolManagement.Models;
 
@@ -34,6 +36,7 @@ namespace SchoolManagement.Controllers
         }
 
         // Đăng ký người dùng mới
+        [Authorize(Policy = "RequireAdminRole")]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO registerDto)
         {
@@ -44,9 +47,10 @@ namespace SchoolManagement.Controllers
                 FirstName= registerDto.FirstName,
                 LastName= registerDto.LastName,
                 RoleId = registerDto.RoleType,
-                DOB = DateTime.Today
+                Gender = registerDto.Gender,
+                DOB = registerDto.DOB
             };
-            var result = await _userManager.CreateAsync(user, registerDto.Password);
+            var result = await _userManager.CreateAsync(user, registerDto.Password); // Khi tạo ban đầu sẽ lấy email làm mật khẩu cho tài khoản mới
 
             if (result.Succeeded)
             {
@@ -95,6 +99,31 @@ namespace SchoolManagement.Controllers
             return Unauthorized(new { Message = "Invalid login attempt." });
         }
 
+        // Thay đổi mật khẩu
+        //[AllowAnonymous]
+        [HttpPost("reset-password/{id}")]
+        public async Task<IActionResult> ResetPasswordAsync(string id ,ChangePasswordDTO pswDTO)
+        {
+            //string token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            //await _userManager.ResetPasswordAsync(user, token, password);
+            User user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            IdentityResult result = await _userManager.ChangePasswordAsync(user, pswDTO.OldPassword, pswDTO.NewPassword);
+            
+            if (result.Succeeded)
+            {
+                return Ok("Reset password of " + user.FirstName + " " + user.LastName + " successfully!");
+            }
+            List<IdentityError> errorList = result.Errors.ToList();
+            var errors = string.Join(", ", errorList.Select(e => e.Description));
+            return BadRequest(errors);
+
+        }
+
+        // Đăng xuất
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
@@ -104,7 +133,7 @@ namespace SchoolManagement.Controllers
         }
 
         [HttpGet("me")]
-        public async Task<ActionResult<UserAllDTO>> GetMe()
+        public async Task<ActionResult<UserDetailOutputDTO>> GetMe()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -116,35 +145,68 @@ namespace SchoolManagement.Controllers
                 return Unauthorized(); // Nếu không tìm thấy userId trong claims
             }
 
-            var user = await _userManager.FindByIdAsync(userId);
-
-
-            return Ok(new
-            {
-                user.Id,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                RoleName = user.RoleId,
-                user.DOB,
-                user.Gender
-            });
-        }
-
-        // Lấy thông tin người dùng
-        [AllowAnonymous] // Just for test
-        [HttpGet("all")]
-        public async Task<ActionResult< IEnumerable<UserAllDTO>>> GetAllUser()
-        {
-            var users = await _userManager.Users
-                .Select(u => new UserAllDTO { 
+            var user = await _userManager.Users
+                .Include(u => u.Scores)
+                .Where(u => u.Id == userId)
+                .Select(u => new UserDetailOutputDTO
+                {
                     Id = u.Id,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     Email = u.Email,
                     RoleName = u.RoleId,
                     Gender = u.Gender,
-                    DOB = u.DOB
+                    DOB = u.DOB,
+                    Scores = u.Scores.Select(sc => new ScoreOuputDTO
+                    {
+                        AverageScore = sc.AverageScore,
+                        CourseName = sc.Course.CourseName,
+                        StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
+                        Process1 = sc.Process1,
+                        Process2 = sc.Process2,
+                        Midterm = sc.Midterm,
+                        Final = sc.Final,
+                        Grade = sc.Grade,
+                        UserId = sc.UserId,
+                    }).ToList()
+                })
+                .FirstOrDefaultAsync();
+            if (user == null)
+            {
+                return NotFound();
+            }
+            return Ok(user);
+        }
+
+        // Lấy thông tin người dùng
+        //[AllowAnonymous] // Just for test
+        [Authorize(Policy = "RequireAdminRole")]
+        [HttpGet("all")]
+        public async Task<ActionResult< IEnumerable<UserDetailOutputDTO>>> GetAllUser()
+        {
+            var users = await _userManager.Users
+                .Include(u => u.Scores)
+                .Include(u => u.Courses)
+                .Where(u => u.RoleId != RoleType.Admin)
+                .Select(u => new UserDetailOutputDTO {
+                    Id = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    Email = u.Email,
+                    RoleName = u.RoleId,
+                    Gender = u.Gender,
+                    DOB = u.DOB,
+                    Scores = u.Scores.Select(sc => new ScoreOuputDTO
+                    {
+                        AverageScore = sc.AverageScore,
+                        CourseName = sc.Course.CourseName,
+                        StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
+                        Process1 = sc.Process1,
+                        Process2 = sc.Process2,
+                        Midterm = sc.Midterm,
+                        Final = sc.Final,
+                        UserId = sc.UserId,
+                    }).ToList()
                 })
                 .ToListAsync();
 
@@ -178,42 +240,103 @@ namespace SchoolManagement.Controllers
         // Lấy thông tin người dùng
         [AllowAnonymous] // Just for test
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserAllDTO>> GetUser(string id)
+        public async Task<ActionResult<UserDetailOutputDTO>> GetUser(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
-            var userOutput = new UserAllDTO
+            var user = await _userManager.Users
+                .Include(u => u.Scores)
+                .Where(u => u.Id == id)
+                .Select(u => new UserDetailOutputDTO
+                {
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    DOB = u.DOB,
+                    Gender = u.Gender,
+                    Email = u.Email,
+                    Id = u.Id,
+                    RoleName = u.RoleId,
+                    Scores = u.Scores.Select(sc => new ScoreOuputDTO
+                    {
+                        AverageScore = sc.AverageScore,
+                        CourseName = sc.Course.CourseName,
+                        StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
+                        Process1 = sc.Process1,
+                        Process2 = sc.Process2,
+                        Midterm = sc.Midterm,
+                        Final = sc.Final,
+                        UserId = sc.UserId,
+                    }).ToList()
+                }).FirstOrDefaultAsync();
+                //.ToListAsync();
+            if (user == null)
             {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                DOB = user.DOB,
-                Gender = user.Gender,
-                Email = user.Email,
-                Id = user.Id,
-                RoleName = user.RoleId
-            };
+                return NotFound();
+            }
             
 
-            return userOutput; // Trả về thông tin người dùng
+            return Ok(user); // Trả về thông tin người dùng
         }
 
-        // Cập nhật thông tin người dùng
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateUser(string id, [FromBody] User userUpdate)
+        // Cập nhật thông tin người dùng từng phần
+        [AllowAnonymous]
+        [HttpPatch("{id}")]
+        public async Task<ActionResult<UserAllDTO>> PatchUser(string id, [FromBody] UserPatchInputDTO userDTO, CancellationToken cancellationToken = default)
         {
-            if (id != userUpdate.Id) return BadRequest();
-
+            if (userDTO == null)
+            {
+                return BadRequest();
+            }
+            //var user = await _context.Users.FindAsync(id);
             var user = await _userManager.FindByIdAsync(id);
-            if (user == null) return NotFound();
+            Console.WriteLine("=========== FINDDDDD: ", user);
+            if (user == null)
+            {
+                return NotFound();
+            }
 
-            user.Email = userUpdate.Email;
-            user.UserName = userUpdate.UserName;
-            user.FirstName = userUpdate.FirstName;
-            user.LastName = userUpdate.LastName;
-            // Cập nhật các thuộc tính khác nếu cần
+            // Cập nhật thông tin khóa học
+            if (userDTO.FirstName != null)
+            {
+                user.FirstName = userDTO.FirstName;
+            }
+            if (userDTO.LastName != null)
+            {
+                user.LastName = userDTO.LastName;
+            }
+            if (userDTO.DOB != null)
+            {
+                user.DOB = (DateTime)userDTO.DOB;
+            }
+            if (userDTO.Email != null)
+            {
+                user.Email = userDTO.Email;
+            }
+            if (userDTO.Gender != null)
+            {
+                user.Gender = (GenderType)userDTO.Gender;
+            }
+            if (userDTO.RoleType != null)
+            {
+                await _userManager.RemoveFromRoleAsync(user, user.RoleId.ToString()); // Xóa role cũ
+                user.RoleId = (RoleType)userDTO.RoleType; // Cập nhật RoleId
+                await _userManager.AddToRoleAsync(user, userDTO.RoleType.ToString());
+            }
+            if (userDTO.Password != null)
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, userDTO.Password);
+            }
 
-            await _userManager.UpdateAsync(user); // Cập nhật người dùng
-            return NoContent();
+            _context.Entry(user).State = EntityState.Modified;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var userOutput = await GetUser(user.Id);
+            if (userOutput.Result is NotFoundResult)
+            {
+                return NotFound();
+            }
+
+            return CreatedAtAction("GetUser", new { id = user.Id }, userOutput.Value);
         }
 
         // Xóa người dùng
@@ -224,7 +347,7 @@ namespace SchoolManagement.Controllers
             if (user == null) return NotFound();
 
             await _userManager.DeleteAsync(user); // Xóa người dùng
-            return NoContent();
+            return Ok($"User {user.FirstName} {user.LastName} deleted successfully.");
         }
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)

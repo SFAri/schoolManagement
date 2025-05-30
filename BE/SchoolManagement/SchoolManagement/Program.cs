@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using SchoolManagement.Hub;
 using SchoolManagement.Models;
 
 
@@ -24,16 +25,24 @@ builder.Services.AddDbContext<SchoolContext>(opt => opt.UseSqlServer(
     builder.Configuration.GetConnectionString("DevConnection"))
 );
 
+builder.Services.AddSignalR();
+
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<SchoolContext>()
     .AddRoles<IdentityRole>()
     .AddDefaultTokenProviders();
 
-//builder.Services.AddAuthorization(options =>
-//{
-//    options.AddPolicy("RequireAdminRole",
-//         policy => policy.RequireRole("Admin"));
-//});
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole",
+         policy => policy.RequireRole("Admin"));
+    options.AddPolicy("RequireStudentRole",
+        policy => policy.RequireRole("Student"));
+    options.AddPolicy("RequireLecturerRole",
+        policy => policy.RequireRole("Lecturer"));
+    options.AddPolicy("RequireLecturerOrAdmin",
+        policy => policy.RequireRole("Lecturer", "Admin"));
+});
 
 // Cấu hình JWT
 builder.Services.AddAuthentication(options =>
@@ -103,5 +112,6 @@ app.UseAuthorization();
 app.UseAuthentication();
 
 app.MapControllers();
+//app.MapHub<NotificationHub>("/hub/notification");
 
 app.Run();
