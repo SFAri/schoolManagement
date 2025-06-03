@@ -1,0 +1,21 @@
+.center-div{
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin: auto;
+    gap: 30px;
+}
+
+.div-right, .div-left {
+    flex: 1;
+    margin: auto;
+}
+
+.div-left {
+    text-align: right;
+}
+
+.p-style {
+    font-size: larger;
+    font-weight: 700;
+}
