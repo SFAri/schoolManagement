@@ -1,0 +1,16 @@
+.block-info {
+    display: flex;
+    flex-direction: row;
+}
+.block-left, .block-right {
+    flex: 1;
+    padding: 10px 40px 10px 10px;
+    /* margin: 20px; */
+    margin-bottom: 0px;
+}
+.row-button-end {
+    /* margin: 10px 10px 10px ; */
+    gap: 5px;
+    display: flex;
+    flex-direction: row-reverse;
+}

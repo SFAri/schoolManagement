@@ -1,0 +1,22 @@
+.row-info {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin: 15px;
+    gap: 10px;
+}
+
+.chart-container {
+    display: flex;
+    flex-direction: row; /* Hiển thị theo hàng ngang */
+    justify-content: space-around; /* Căn giữa các biểu đồ */
+    flex-wrap: wrap; /* Cho phép xuống dòng nếu cần */
+    overflow: hidden;
+}
+
+@media (max-width: 768px) { /* Khi màn hình nhỏ hơn 768px */
+    .chart-container {
+        flex-direction: column; /* Hiển thị theo hàng dọc */
+    }
+}
