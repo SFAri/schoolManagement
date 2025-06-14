@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchoolManagement.Models;
 
@@ -11,9 +12,10 @@ using SchoolManagement.Models;
 namespace SchoolManagement.Migrations
 {
     [DbContext(typeof(SchoolContext))]
-    partial class SchoolContextModelSnapshot : ModelSnapshot
+    [Migration("20250608120249_SeedRoles_Modified")]
+    partial class SeedRoles_Modified
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,19 +53,19 @@ namespace SchoolManagement.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "4e0b76bd-4493-4ba4-ae61-47a8a608542b",
+                            Id = "aafe515f-9493-4d58-9b8b-46bc9e03850a",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "0851e4a9-c40e-4a53-b8b0-596550da27c8",
+                            Id = "bd60cbd8-bec8-4e05-9611-e9b7be52ddbd",
                             Name = "Lecturer",
                             NormalizedName = "LECTURER"
                         },
                         new
                         {
-                            Id = "cbbb038c-ede0-470f-a651-02671f4f0c98",
+                            Id = "d81c53ae-d756-4100-b0be-90699a1a9692",
                             Name = "Student",
                             NormalizedName = "STUDENT"
                         });
@@ -158,23 +160,8 @@ namespace SchoolManagement.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "13f6374a-dfee-4c77-9bfa-918edfb16a3c",
-                            RoleId = "4e0b76bd-4493-4ba4-ae61-47a8a608542b"
-                        },
-                        new
-                        {
-                            UserId = "74e9a246-5f13-491e-a0d2-d5fbaddf91c8",
-                            RoleId = "0851e4a9-c40e-4a53-b8b0-596550da27c8"
-                        },
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            RoleId = "cbbb038c-ede0-470f-a651-02671f4f0c98"
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            RoleId = "cbbb038c-ede0-470f-a651-02671f4f0c98"
+                            UserId = "133fd73e-8768-42e7-8f08-ccf92302cfb4",
+                            RoleId = "aafe515f-9493-4d58-9b8b-46bc9e03850a"
                         });
                 });
 
@@ -197,45 +184,6 @@ namespace SchoolManagement.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("SchoolManagement.Models.AcademicYear", b =>
-                {
-                    b.Property<int>("AcademicYearId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AcademicYearId"), 1L, 1);
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsLocked")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Year")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("AcademicYearId");
-
-                    b.ToTable("AcademicYears");
-
-                    b.HasData(
-                        new
-                        {
-                            AcademicYearId = 1,
-                            CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsLocked = true,
-                            Year = "2023-2024"
-                        },
-                        new
-                        {
-                            AcademicYearId = 2,
-                            CreatedAt = new DateTime(2025, 6, 12, 10, 50, 53, 631, DateTimeKind.Local).AddTicks(8700),
-                            IsLocked = false,
-                            Year = "2024-2025"
-                        });
-                });
-
             modelBuilder.Entity("SchoolManagement.Models.Course", b =>
                 {
                     b.Property<int>("CourseId")
@@ -243,9 +191,6 @@ namespace SchoolManagement.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CourseId"), 1L, 1);
-
-                    b.Property<int>("AcademicYearId")
-                        .HasColumnType("int");
 
                     b.Property<string>("CourseName")
                         .IsRequired()
@@ -266,33 +211,11 @@ namespace SchoolManagement.Migrations
 
                     b.HasKey("CourseId");
 
-                    b.HasIndex("AcademicYearId");
-
                     b.HasIndex("LecturerId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("Courses");
-
-                    b.HasData(
-                        new
-                        {
-                            CourseId = 1,
-                            AcademicYearId = 1,
-                            CourseName = "React",
-                            EndDate = new DateTime(2024, 1, 31, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            LecturerId = "74e9a246-5f13-491e-a0d2-d5fbaddf91c8",
-                            StartDate = new DateTime(2023, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            CourseId = 2,
-                            AcademicYearId = 1,
-                            CourseName = "Flutter",
-                            EndDate = new DateTime(2024, 1, 31, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            LecturerId = "74e9a246-5f13-491e-a0d2-d5fbaddf91c8",
-                            StartDate = new DateTime(2023, 9, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
                 });
 
             modelBuilder.Entity("SchoolManagement.Models.Enrollment", b =>
@@ -311,56 +234,6 @@ namespace SchoolManagement.Migrations
                     b.HasIndex("ShiftId");
 
                     b.ToTable("Enrollments");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            ShiftId = 1,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            ShiftId = 2,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            ShiftId = 1,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            ShiftId = 2,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            ShiftId = 3,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            ShiftId = 4,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            ShiftId = 3,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            ShiftId = 4,
-                            TimeJoined = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
                 });
 
             modelBuilder.Entity("SchoolManagement.Models.Score", b =>
@@ -400,60 +273,6 @@ namespace SchoolManagement.Migrations
                     b.HasIndex("CourseId");
 
                     b.ToTable("Scores");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            CourseId = 1,
-                            AverageScore = 8.65f,
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Final = 8f,
-                            Grade = 1,
-                            LastUpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Midterm = 10f,
-                            Process1 = 8.5f,
-                            Process2 = 9f
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            CourseId = 1,
-                            AverageScore = 7.4f,
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Final = 7f,
-                            Grade = 2,
-                            LastUpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Midterm = 10f,
-                            Process1 = 7f,
-                            Process2 = 6f
-                        },
-                        new
-                        {
-                            UserId = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            CourseId = 2,
-                            AverageScore = 8.65f,
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Final = 8f,
-                            Grade = 1,
-                            LastUpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Midterm = 10f,
-                            Process1 = 8.5f,
-                            Process2 = 9f
-                        },
-                        new
-                        {
-                            UserId = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            CourseId = 2,
-                            AverageScore = 7.4f,
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Final = 8f,
-                            Grade = 2,
-                            LastUpdatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Midterm = 7f,
-                            Process1 = 6f,
-                            Process2 = 7f
-                        });
                 });
 
             modelBuilder.Entity("SchoolManagement.Models.Shift", b =>
@@ -481,40 +300,6 @@ namespace SchoolManagement.Migrations
                     b.HasIndex("CourseId");
 
                     b.ToTable("Shifts");
-
-                    b.HasData(
-                        new
-                        {
-                            ShiftId = 1,
-                            CourseId = 1,
-                            MaxQuantity = 30,
-                            ShiftCode = 0,
-                            WeekDay = 0
-                        },
-                        new
-                        {
-                            ShiftId = 2,
-                            CourseId = 1,
-                            MaxQuantity = 30,
-                            ShiftCode = 1,
-                            WeekDay = 3
-                        },
-                        new
-                        {
-                            ShiftId = 3,
-                            CourseId = 2,
-                            MaxQuantity = 30,
-                            ShiftCode = 0,
-                            WeekDay = 2
-                        },
-                        new
-                        {
-                            ShiftId = 4,
-                            CourseId = 2,
-                            MaxQuantity = 30,
-                            ShiftCode = 1,
-                            WeekDay = 4
-                        });
                 });
 
             modelBuilder.Entity("SchoolManagement.Models.User", b =>
@@ -601,9 +386,9 @@ namespace SchoolManagement.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "13f6374a-dfee-4c77-9bfa-918edfb16a3c",
+                            Id = "133fd73e-8768-42e7-8f08-ccf92302cfb4",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "5c2c726e-4c2f-4153-a3ab-eac262e5acd5",
+                            ConcurrencyStamp = "842d9a81-2d41-42f5-b36d-7823a0916a9b",
                             DOB = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "admin@gmail.com",
                             EmailConfirmed = false,
@@ -613,75 +398,12 @@ namespace SchoolManagement.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@GMAIL.COM",
                             NormalizedUserName = "ADMIN@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEMGOkUv3mXM9YrTSH1XlWZveLUJlpWueXo4rC+wYCURZ4ZrTs+3vyiq+s+8Oo6vwqA==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEDfjBkLeDHxgUPw2LREvgQATZhoLWQ3YYkpVTSBhvYYVQgwao/VE/dyrT2SkBVJa0g==",
                             PhoneNumberConfirmed = false,
                             RoleId = 0,
-                            SecurityStamp = "673fe6ec-ceed-4038-a309-7b9987cfb197",
+                            SecurityStamp = "83508a40-49fd-4604-bd7f-7e19f53cabb9",
                             TwoFactorEnabled = false,
                             UserName = "admin@gmail.com"
-                        },
-                        new
-                        {
-                            Id = "74e9a246-5f13-491e-a0d2-d5fbaddf91c8",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "6d9842dc-3c34-4a4c-831d-e387311820fa",
-                            DOB = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "lecturer1@gmail.com",
-                            EmailConfirmed = false,
-                            FirstName = "Liam",
-                            Gender = 1,
-                            LastName = "Nguyen",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "LECTURER1@GMAIL.COM",
-                            NormalizedUserName = "LECTURER1@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEHIgbH72vgIa3xJkYDj/aD+qlw/H7l13KfuSpG71yE2+KhQdVkWYqXLjOVJJlV5ZKg==",
-                            PhoneNumberConfirmed = false,
-                            RoleId = 1,
-                            SecurityStamp = "64950a27-52d2-4e6d-ab76-48d33b795971",
-                            TwoFactorEnabled = false,
-                            UserName = "lecturer1@gmail.com"
-                        },
-                        new
-                        {
-                            Id = "bcfa7ac0-d384-45fe-9d2f-18761f1b012d",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "1281e76d-1544-4483-b6c1-a0d0dae51e64",
-                            DOB = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "student1@gmail.com",
-                            EmailConfirmed = false,
-                            FirstName = "Anna",
-                            Gender = 0,
-                            LastName = "Le",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "STUDENT1@GMAIL.COM",
-                            NormalizedUserName = "STUDENT1@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEMHPxqbyQ1HTM0KmCxbofxFkbgNJBihDKIuBpIAJXri8Xzi3YfvUWfOYU/Jq7QK8lA==",
-                            PhoneNumberConfirmed = false,
-                            RoleId = 2,
-                            SecurityStamp = "e93e4a4d-f7e6-436a-be32-d7e017effb20",
-                            TwoFactorEnabled = false,
-                            UserName = "student1@gmail.com"
-                        },
-                        new
-                        {
-                            Id = "a89c11b0-2099-43f3-8060-74237b6ed5cb",
-                            AccessFailedCount = 0,
-                            ConcurrencyStamp = "05bcaf33-539a-455b-92c6-51c9093ea159",
-                            DOB = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "student2@gmail.com",
-                            EmailConfirmed = false,
-                            FirstName = "Minh",
-                            Gender = 1,
-                            LastName = "Tran",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "STUDENT2@GMAIL.COM",
-                            NormalizedUserName = "STUDENT2@GMAIL.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEMPfiUzVaoe8zPwwX9pF6WIos1EIOyb5EToHF1T60wC7XH5UBJS3tsCSGGMXuMYswQ==",
-                            PhoneNumberConfirmed = false,
-                            RoleId = 2,
-                            SecurityStamp = "b4244218-db73-4f9d-b719-5a03a1d11c1e",
-                            TwoFactorEnabled = false,
-                            UserName = "student2@gmail.com"
                         });
                 });
 
@@ -738,12 +460,6 @@ namespace SchoolManagement.Migrations
 
             modelBuilder.Entity("SchoolManagement.Models.Course", b =>
                 {
-                    b.HasOne("SchoolManagement.Models.AcademicYear", "AcademicYear")
-                        .WithMany("Courses")
-                        .HasForeignKey("AcademicYearId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("SchoolManagement.Models.User", "Lecturer")
                         .WithMany()
                         .HasForeignKey("LecturerId")
@@ -753,8 +469,6 @@ namespace SchoolManagement.Migrations
                     b.HasOne("SchoolManagement.Models.User", null)
                         .WithMany("Courses")
                         .HasForeignKey("UserId");
-
-                    b.Navigation("AcademicYear");
 
                     b.Navigation("Lecturer");
                 });
@@ -806,11 +520,6 @@ namespace SchoolManagement.Migrations
                         .IsRequired();
 
                     b.Navigation("Course");
-                });
-
-            modelBuilder.Entity("SchoolManagement.Models.AcademicYear", b =>
-                {
-                    b.Navigation("Courses");
                 });
 
             modelBuilder.Entity("SchoolManagement.Models.Course", b =>

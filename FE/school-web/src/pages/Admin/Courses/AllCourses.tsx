@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense, useMemo } from "react";
 import App from "../../../App";
 import { AgGridReact } from 'ag-grid-react';
 import { ColDef} from "ag-grid-community";
-import { FolderAddFilled } from "@ant-design/icons";
+import { BookOutlined, FolderAddFilled } from "@ant-design/icons";
 import './AllCourses.css'
 import { IRowCourse } from "../../../types/IRowCourse";
 import dayjs from 'dayjs';
@@ -13,10 +13,10 @@ import EditDeleteButton from "../../../component/EditDeleteButton/EditDeleteButt
 import { message, Spin } from "antd";
 import { FormatDate } from "../../../utils/formatDate";
 import { Spinner } from "react-bootstrap";
-import { deleteReq, getReq } from "../../../services/api";
+import { deleteReq, getReq, postReq } from "../../../services/api";
 import { IDataGetCourse } from "../../../types/IDataGetCourse";
 import { ApiResult } from "../../../types/api/IApiResult";
-
+import Swal from 'sweetalert2';
 const  ModalCourse = lazy(() =>import( "../../../component/ModalCourse/ModalCourse"));
 const ModalJoinCourse = lazy(() => import('../../../component/ModalJoinCourse/ModalJoinCourse'));
 const ModalEditCourse = lazy(() => import('../../../component/ModalCourse/ModalEditCourse'));
@@ -30,6 +30,7 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
     const [isModalEditOpen, setIsModalEditOpen] = useState(false);
     const navigator = useNavigate();
     const [courseEdit, setCourseEdit] = useState<any>(null);
+    
 
     // ------------- FOR MESSAGE: ----------
     const displayMessage = (message : String, isSuccess : boolean) => {
@@ -64,12 +65,14 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
         setLoading(true);
         try {
             const {data, totalCount} = await getReq<ApiResult<IDataGetCourse>>('/Courses', { pageNumber: 1, pageSize: 10 });
+            console.log('Dữ liệu từ API:', data);
             const mappedData: IRowCourse[] = data.map(item => ({
                 courseId: item.courseId,
                 courseName: item.courseName,
                 lecturerName: item.lecturer.lecturerName,
                 startDate: item.startDate,
                 endDate: item.endDate,
+                year: item.year
             }));
             setTotalPage(totalCount);
             setRowData(mappedData);
@@ -98,18 +101,50 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
     const defaultColDef: ColDef = {
         flex: 1,
     };
+
+    const autoGroupColumnDef = useMemo<ColDef>(() => {
+        return {
+        minWidth: 200,
+        };
+    }, []);
     
       // Column Definitions: Defines & controls grid columns.
     const [colDefs, setColDefs] = useState<ColDef<IRowCourse>[]>([
+        {
+            field: 'year',
+            rowGroup: true,
+            hide: true,
+        },
         { field: "courseId", hide: true},
         { field: "courseName", filter:true},
         { field: "lecturerName", filter:true},
-        { field: "startDate" , cellRenderer: (data: any) => {
-            return FormatDate(data.value)
-        }},
-        { field: "endDate", cellRenderer: (data: any) => {
-            return FormatDate(data.value)
-        }},
+        { field: "startDate", 
+            cellRenderer: (params: any) => {
+                return params.node.group ? '' : FormatDate(params.value);
+            }
+        },
+        { field: "endDate", 
+            cellRenderer: (params: any) => {
+                return params.node.group ? '' : FormatDate(params.value);
+            }
+        },
+        // {
+        //     colId: "actionButton",
+        //     field: 'button',
+        //     headerName: 'Action',
+        //     cellRenderer: (params: any) => {
+        //         if (params.node.group) return null;
+        //         return EditDeleteButton(params);
+        //     },
+        //     cellRendererParams: (params: { data: { startDate: string } }) => ({
+        //         toggleOpenModal: toggleEditOpen,
+        //         onViewClicked: handleViewCourse,
+        //         onCancelClick: toggleClose,
+        //         onConfirmDelete: handleDelete,
+        //         enableDelete: isDeleteEnabled(params.data.startDate),
+        //         enableEdit: role === 'admin'
+        //     })
+        // }
     ]);
 
     // -------------------------
@@ -166,26 +201,64 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
         const now = dayjs().startOf('day');
         return (role === 'admin' || (role === 'student' && start.isAfter(now)));
     };
+
+    const showAlert = async () => {
+        const getLast = await getReq<any>('/AcademicYear', {});
+        if (getLast!== null){
+            const result = await Swal.fire({
+                title: 'Warning!',
+                text: 'Are you sure ending up ' + getLast.year + ' to start a new academic year. Cautions: You cannot modified any courses or relevant information of ended academic year?',
+                icon: 'warning',
+                confirmButtonText: 'Confirm',
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+            });
+    
+            if (result.isConfirmed) {
+                try {
+                    // Gọi API để xóa
+                    let result: any = await postReq('/AcademicYear', {});
+                    console.log('res: ' + result.year);
+                    Swal.fire(
+                        'End old year!',
+                        'You have just ended an old academic year and start a new academic year(' + result.year + ') successfully!',
+                        'success'
+                    );
+                } catch (error) {
+                    Swal.fire(
+                        'Lỗi!',
+                        'Có lỗi xảy ra khi xóa mục.',
+                        'error'
+                    );
+                }
+            }
+        }
+    };
+
       
     return (
         <>
             {contextHolder}
             <App role={role} selected="1">
-                {/* {loading ? 
-                    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-                        <Spin size="large" tip="Đang tải dữ liệu..." />
-                    </div>
-                : 
-                    <> */}
                         <h2 className="title">List Courses</h2>
                         <div className="row-button">
                             { role === 'admin' && (
-                                <ButtonCustom 
-                                    label="Create course"
-                                    onClickEvent={toggleOpen}
-                                    iconButton = {<FolderAddFilled />}
-                                    colorButton=""
-                                />
+                                <>
+                                    <ButtonCustom 
+                                        label="Create course"
+                                        onClickEvent={toggleOpen}
+                                        iconButton = {<FolderAddFilled />}
+                                        colorButton=""
+                                    />
+
+                                    <ButtonCustom 
+                                        label="End Year"
+                                        onClickEvent={showAlert}
+                                        iconButton = {<BookOutlined />}
+                                        colorButton="green"
+                                    />
+                                </>
                             )}
                             { role === 'student' && (
                                 <ButtonCustom 
@@ -203,21 +276,25 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
                                 </div>
                             : 
                                 <>
-                                
                                     <AgGridReact                                
                                         rowData={rowData}
                                         columnDefs =  {[...colDefs, 
                                                 {
                                                     colId: "actionButton",
                                                     field: 'button',
+                                                    // hide: true,
                                                     headerName: 'Action',
-                                                    cellRenderer: EditDeleteButton,
+                                                    // cellRenderer: EditDeleteButton,
+                                                    cellRenderer: (params: any) => {
+                                                        if (params.node.group) return null; // Không render gì cho group row
+                                                        return EditDeleteButton(params);    // Render nút bình thường cho row con
+                                                    },
                                                     cellRendererParams: (params: { data: { startDate: string; }; }) => ({
                                                         toggleOpenModal: toggleEditOpen,
                                                         onViewClicked: handleViewCourse,
                                                         onCancelClick: toggleClose,
                                                         onConfirmDelete: handleDelete,
-                                                        enableDelete: isDeleteEnabled(params.data.startDate),
+                                                        enableDelete: isDeleteEnabled(params.data?.startDate),
                                                         enableEdit: role === 'admin'
                                                     })
                                                 } 
@@ -226,6 +303,10 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
                                         defaultColDef={defaultColDef}
                                         pagination={true}
                                         paginationPageSize={10}
+                                        groupDefaultExpanded={0} // Mở tất cả các nhóm
+                                        rowGroupPanelShow={"always"}
+                                        animateRows={true}
+                                        autoGroupColumnDef={autoGroupColumnDef}
                                         // paginationAutoPageSize={true}
                                         paginationPageSizeSelector={[10, 25, 50]}
                                     />
@@ -255,8 +336,6 @@ const AllCoursesPage: React.FC<{role: string}> = ({role}) => {
                                 )}
                             </>
                         }
-                    {/* </>
-                } */}
                 
             </App>
         </>

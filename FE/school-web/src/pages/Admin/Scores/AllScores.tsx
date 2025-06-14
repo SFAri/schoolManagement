@@ -3,14 +3,13 @@ import App from "../../../App";
 import { ColDef, ExcelExportParams, ExcelStyle, GridApi, GridReadyEvent } from "ag-grid-community";
 import { IRowAllScore } from "../../../types/IRowAllScore";
 import { DownloadOutlined } from "@ant-design/icons";
-import { Form, message, Select, Spin, Tabs, TabsProps } from "antd";
+import { message, Spin, Tabs, TabsProps } from "antd";
 import useMessage from "antd/es/message/useMessage";
 import { ApiResult } from "../../../types/api/IApiResult";
 import { getReq } from "../../../services/api";
 import { IScore } from "../../../types/IScore";
 import ButtonCustom from "../../../component/Button/Button";
 import { AgGridReact } from "ag-grid-react";
-import { ChartData } from "../DetailCourse/DetailCourse";
 import LineChart from "../../../component/Chart/LineChart";
 
 export interface GradeCount {
@@ -29,7 +28,7 @@ interface YearlyStudentData {
 }
 
 export interface LineChartData {
-    year: number;        // Năm (ví dụ: 2025)
+    year: string;        // Năm (ví dụ: 2025)
     grades: GradeCount[];
 }
 
@@ -39,7 +38,6 @@ const AllScores: React.FC<{role: string}> = ({role}) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [tabkey, setTabkey] = useState<Number>(1);
     const [chartData, setChartData] = useState<LineChartData[]>([]);
-    const [selectedYear, setSelectedYear] = useState<Number>(2025);
     const didFetch = useRef(false);
     
     const [colMarkDefs, setColMarkDefs] = useState<ColDef<any>[]>([
@@ -71,7 +69,7 @@ const AllScores: React.FC<{role: string}> = ({role}) => {
       if (averageScore >= 6.0) return 'Average';
       if (averageScore < 6.0) return 'Below Average';
       return 'Not Graded';
-  };
+    };
 
     // FETCH DATA HERE:
     const reloadData = async () => {
@@ -91,18 +89,22 @@ const AllScores: React.FC<{role: string}> = ({role}) => {
           }));
           console.log("Scores: " + JSON.stringify(data, null, 2));
           setRowData(mappedData);
-          const yearlyStudentData: { [year: number]: YearlyStudentData } = {};
 
+          const yearlyStudentData: { [year: string]: YearlyStudentData } = {};
+
+          // Gom điểm theo user theo từng năm
           data.forEach(score => {
-            const year = score.year; // Giả sử bạn có trường year trong score
-            const userId = score.userId; // userId là chuỗi
+            const year = score.year; // "2023-2024"
+            const userId = score.userId?.toLowerCase();
+
+            if (!year || !userId) return;
 
             if (!yearlyStudentData[year]) {
-                yearlyStudentData[year] = {};
+              yearlyStudentData[year] = {};
             }
 
-            if (!yearlyStudentData[year][userId.toLowerCase()]) {
-              yearlyStudentData[year][userId.toLowerCase()] = {
+            if (!yearlyStudentData[year][userId]) {
+              yearlyStudentData[year][userId] = {
                 studentName: score.studentName,
                 subjects: 0,
                 totalScore: 0,
@@ -111,39 +113,64 @@ const AllScores: React.FC<{role: string}> = ({role}) => {
               };
             }
 
-            // Cập nhật số môn và tổng điểm
-            yearlyStudentData[year][userId.toLowerCase()].subjects += 1;
-            yearlyStudentData[year][userId.toLowerCase()].totalScore += score.averageScore; // Giả sử score.averageScore chứa điểm của môn học
+            yearlyStudentData[year][userId].subjects += 1;
+            yearlyStudentData[year][userId].totalScore += score.averageScore || 0;
           });
 
-        // Tính điểm trung bình và grade cho từng sinh viên
+          // Set để thu thập tất cả các grade từng xuất hiện
+          const allGradesSet = new Set<string>();
 
-        Object.keys(yearlyStudentData).forEach(year => {
-            const students = yearlyStudentData[parseInt(year)];
-            const gradesCount: { [grade: string]: number } = {};
+          // Tính average và grade cho từng học sinh theo năm
+          const newChartData: {
+            year: string;
+            grades: { name: string; value: number }[];
+          }[] = [];
+
+          Object.keys(yearlyStudentData).forEach(year => {
+            const students = yearlyStudentData[year];
+            const gradeCount: { [grade: string]: number } = {};
 
             Object.keys(students).forEach(userId => {
-                const student = students[userId];
-                student.averageScore = student.totalScore / student.subjects; // Tính điểm trung bình
+              const student = students[userId];
+              student.averageScore = student.totalScore / student.subjects;
 
-                // Gán grade dựa trên điểm trung bình
-                student.grade = calculateGrade(student.averageScore);
+              // Tính grade bằng averageScore
+              student.grade = calculateGrade(student.averageScore);
 
-                // Cập nhật số lượng sinh viên theo grade
-                gradesCount[student.grade] = (gradesCount[student.grade] || 0) + 1;
+              // Đếm số lượng grade
+              gradeCount[student.grade] = (gradeCount[student.grade] || 0) + 1;
+
+              // Ghi nhận grade này để đảm bảo các năm khác có đủ
+              allGradesSet.add(student.grade);
             });
 
-            // Chuyển đổi thành định dạng cho biểu đồ
-            chartData.push({
-                year: parseInt(year),
-                grades: Object.keys(gradesCount).map(grade => ({
-                    name: grade,
-                    value: gradesCount[grade]
-                }))
+            newChartData.push({
+              year,
+              grades: Object.entries(gradeCount).map(([grade, count]) => ({
+                name: grade,
+                value: count
+              }))
             });
-        });
-          console.log("Chart Data: ", JSON.stringify(chartData, null, 2));
-          setChartData(chartData);
+          });
+
+          // Danh sách tất cả các loại grade xuất hiện trên toàn bộ dữ liệu
+          const allGrades = Array.from(allGradesSet);
+
+          // Chuẩn hóa newChartData: đảm bảo mỗi năm có đầy đủ grade
+          const normalizedChartData = newChartData.map(entry => {
+            const gradeMap = new Map(entry.grades.map(g => [g.name, g.value]));
+            const fullGrades = allGrades.map(name => ({
+              name,
+              value: gradeMap.get(name) ?? 0
+            }));
+            return {
+              year: entry.year,
+              grades: fullGrades
+            };
+          });
+
+          console.log("Chart Data:", normalizedChartData);
+          setChartData(normalizedChartData);
         } catch (error: any) {
             if (error.name === 'CanceledError') {
                 console.log('Request canceled: ', error.response?.data);

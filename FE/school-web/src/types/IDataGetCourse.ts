@@ -6,6 +6,7 @@ export interface IDataGetCourse {
     courseName: string,
     startDate: string,
     endDate: string,
+    year: string,
     lecturer: {
         lecturerId: string,
         lecturerName: string,

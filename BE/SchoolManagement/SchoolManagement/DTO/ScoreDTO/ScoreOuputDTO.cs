@@ -6,7 +6,7 @@ namespace SchoolManagement.DTO.ScoreDTO
     {
         //public int ScoreId { get; set; }
         public string CourseName { get; set; } // Tên khóa học
-        public int Year { get; set; } 
+        public String Year { get; set; } 
         public String UserId { get; set; } // Id sinh viên
         public string StudentName { get; set; } // Tên sinh viên
         public float Process1 { get; set; } // Điểm QT1

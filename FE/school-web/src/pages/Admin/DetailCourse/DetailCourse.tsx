@@ -21,14 +21,55 @@ import dayjs from 'dayjs';
 import { Spinner } from "react-bootstrap";
 import PieChart from "../../../component/Chart/PieChart";
 import BarChart from "../../../component/Chart/BarChart";
+import { ScheduleXCalendar } from "@schedule-x/react";
+import { createEventsServicePlugin } from "@schedule-x/events-service";
+import { useCalendarApp } from "@schedule-x/react";
+import { createViewWeek } from "@schedule-x/calendar";
+import { createViewMonthGrid } from "@schedule-x/calendar";
+import { createViewMonthAgenda } from "@schedule-x/calendar";
+import { viewWeek } from "@schedule-x/calendar";
+import { viewMonthGrid } from "@schedule-x/calendar";
+import { createCalendarControlsPlugin } from '@schedule-x/calendar-controls'
+import { createCalendar } from "@schedule-x/calendar";
 
-// 1 block chua info cua khoa hoc
-// 1 table gom danh sach cac shift cua course duoc chon
-// visualization schedule khi nhan vao 1 nut "Xem TKB" -> De sau
 export interface ChartData {
     name: string;
     value: number;
 }
+
+export const convertCourseToEvents = (course: IDataGetCourse) => {
+    const events: { id: number; title: string; start: string; end: string }[] = [];
+    if (course) {
+        console.log("Course Name: " + course.courseName);
+        const startDate = dayjs(course.startDate);
+        const endDate = dayjs(course.endDate);
+        const shifts = course.shifts;
+
+        console.log("=== SHIFTS: " + JSON.stringify(shifts, null, 2));
+
+        // Iterate through each day in the date range
+        for (let date = startDate; date.isBefore(endDate) || date.isSame(endDate, 'day'); date = date.add(1, 'day')) {
+            const weekDay = date.format('dddd');
+
+            // Iterate through each shift
+            shifts.forEach(shift => {
+                if (shift.weekDay.toLowerCase() === weekDay.toLowerCase()) {
+                    const startHour = shift.shiftOfDay === 'Morning' ? '07:00' : '13:00';
+                    const endHour = shift.shiftOfDay === 'Morning' ? '12:00' : '18:00';
+                    const start = date.format(`YYYY-MM-DD`) + ` ${startHour}`;
+                    const end = date.format(`YYYY-MM-DD`) + ` ${endHour}`;
+                    events.push({
+                        id: shift.shiftId,
+                        title: `${course.courseName} - ${shift.shiftOfDay}`,
+                        start: start,
+                        end: end
+                    });
+                }
+            });
+        }
+    }
+    return events;
+};
 
 const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
     const navigator = useNavigate();
@@ -42,6 +83,11 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
     const gridRef = useRef<AgGridReact>(null);
     const [myScore, setMyScore] = useState<IScore>();
     const [chartData, setChartData] = useState<ChartData[]>([]);
+    const eventsServicePlugin = createEventsServicePlugin();
+    const [events, setEvents] = useState<any>([]);
+    const [selectedDate, setSelectedDate] = useState<string>('');
+    const calendarControls = createCalendarControlsPlugin();
+
     function toggleOpen() {
         setIsModalOpen(!isModalOpen);
     }
@@ -60,13 +106,7 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
     }
 
     // Fetch data here: Student chỉ coi được các ca học mà nó đã đăng ký học
-    const [rowShiftData, setRowShiftData] = useState<IRowShift[]>([
-        { shiftId: 1, shiftOfDay: EShiftCode.Morning, weekDay: EWeekDay.TuesDay, maxQuantity: 20},
-        { shiftId: 2, shiftOfDay: EShiftCode.Afternoon, weekDay: EWeekDay.TuesDay, maxQuantity: 20},
-        { shiftId: 3, shiftOfDay: EShiftCode.Morning, weekDay: EWeekDay.Wednesday, maxQuantity: 20},
-        { shiftId: 4, shiftOfDay: EShiftCode.Afternoon, weekDay: EWeekDay.Monday, maxQuantity: 20},
-        { shiftId: 5, shiftOfDay: EShiftCode.Afternoon, weekDay: EWeekDay.Friday, maxQuantity: 20},
-    ]);
+    const [rowShiftData, setRowShiftData] = useState<IRowShift[]>([]);
     
       // Column Definitions: Defines & controls grid columns.
     const [colShiftDefs, setColShiftDefs] = useState<ColDef<IRowShift>[]>([
@@ -119,7 +159,6 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
             const result = await getReq<IDataGetCourse>('/Courses/' + id, {});
             if (result !== null){
                 setData(result)
-                console.log(result);
                 setRowShiftData(result.shifts);
                 let scores = result.scores.map((score : IScore) => {
                     return {
@@ -133,8 +172,18 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
                         grade: score.grade
                     }
                 });
+                let es = convertCourseToEvents(result);
+                setEvents(es);
+
+                es.forEach(event => {
+                    eventsServicePlugin.add({
+                        title: event.title,
+                        start: event.start,
+                        end: event.end,
+                        id: event.id
+                    });
+                });
                 setMarkData(scores);
-                console.log("Course: " + result);
                 const gradeCounts = scores.reduce<{ [key: string]: number }>((acc, score) => {
                     acc[score.grade] = (acc[score.grade] || 0) + 1;
                     return acc;
@@ -152,6 +201,14 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
                     const userScore = result.scores.find((score: IScore) => score.userId === currentUserId);
                     setMyScore(userScore);
                 }
+
+                let time: number = Date.parse(result.startDate);
+                let res: Date = new Date(time);
+                const year = res.getFullYear();
+                const month = String(res.getMonth() + 1).padStart(2, '0'); // Thêm 1 vì tháng bắt đầu từ 0
+                const day = String(res.getDate()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day}`;
+                setSelectedDate(formattedDate);
             }
         } catch (error: any) {
             if (error.name === 'CanceledError') {
@@ -165,12 +222,36 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
         }
     }
 
+    // Calendar:
+    const calendar = createCalendar({
+        views: [
+            createViewWeek(),
+        ],
+        selectedDate: selectedDate,
+        defaultView: viewWeek.name,
+        dayBoundaries: {
+            start: '06:00',
+            end: '18:00',
+        },
+        weekOptions: {
+            gridHeight: 320,
+        },
+        events: events,
+        plugins: [eventsServicePlugin, calendarControls],
+    });
+
     useEffect(() => {
         if (!didFetch.current) {
             reloadData();
             didFetch.current = true;
         }
     },[]);
+
+    useEffect(() => {
+        if (selectedDate) {
+            calendarControls.setDate(selectedDate); // ⚡ cập nhật selectedDate cho calendar
+        }
+    }, [calendarControls, selectedDate]);
 
     const onCellValueChanged = (params: any) => {
         const { data, colDef } = params;
@@ -302,11 +383,12 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
             :
             
                 (<App role={role} selected="1">
-                    <h2 className="title">Course Information</h2>
+                    <h2 className="title">{data?.courseName}</h2>
                     <div className="row-info">
-                        <Button type="primary" ghost disabled><b>Course Name:</b> {data?.courseName} </Button>
+                        {/* <Button type="primary" ghost disabled><b>Course Name:</b> {data?.courseName} </Button> */}
                         <Button type="primary" ghost disabled><b>Time:</b> {data && FormatDate(data?.startDate)} - {data && FormatDate(data?.endDate)}</Button>
                         <Button type="primary" ghost disabled><b>Lecturer:</b> {data?.lecturer.lecturerName}</Button>
+                        <Button type="primary" ghost disabled><b>Year:</b> {data?.year}</Button>
                     </div>
                     <div className="row-button">
                         <ButtonCustom 
@@ -328,28 +410,9 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
 
                     {/* If see grid */}
                     <h2 className="title">List Shifts</h2>
-                        <CustomGridTable
-                            height={250}
-                            rowData={rowShiftData}
-                            colDefs={role === 'admin' && rowShiftData.length > 2 && dayjs(data?.startDate).startOf('day').isAfter(dayjs().startOf('day'))
-                                ? [...colShiftDefs,
-                                {
-                                    colId: "actionButton",
-                                    field: 'button',
-                                    headerName: 'Action',
-                                    cellRenderer: EditDeleteButton,
-                                    cellRendererParams: {
-                                        onCancelClick: toggleClose,
-                                        enableEdit: false,
-                                        enableView: false,
-                                        onConfirmDelete: handleDelete,
-                                    }
-                                }
-                                ]
-                                : colShiftDefs}
-                            defaultColDef={defaultColDef}
-                            gridRef={undefined} 
-                            onCellValueChanged={undefined} />                 
+                    <div className="sx-react-calendar-wrapper" style={{ width: '1200px', height: '550px', overflow: "hidden" }}>
+                        <ScheduleXCalendar calendarApp={calendar} />
+                    </div>
 
                     {role === 'student' &&
                         <>

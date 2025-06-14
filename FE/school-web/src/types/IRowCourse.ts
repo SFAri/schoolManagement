@@ -4,4 +4,5 @@ export interface IRowCourse {
     lecturerName: string;
     startDate: string;
     endDate: string;
+    year: string;
 }

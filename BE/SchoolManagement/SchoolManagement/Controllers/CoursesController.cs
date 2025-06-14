@@ -39,7 +39,8 @@ namespace SchoolManagement.Controllers
           {
               return NotFound();
           }
-            var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            //var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            var userRole = User.Claims.FirstOrDefault(c => c.Type.Contains("role"))?.Value;
             //var userId = User.Identity.GetUserId();
             string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             Console.WriteLine("User Id: " + userId);
@@ -57,7 +58,7 @@ namespace SchoolManagement.Controllers
                       .OrderBy(c => c.CourseId)
                       .Include(c => c.Lecturer)
                       .Include(c => c.Shifts)
-                      //.Include(c => c.Scores)     
+                      .Include(c => c.AcademicYear)
                       .AsSplitQuery()
                       .Select(c => new CourseOutputGetDTO
                       {
@@ -65,6 +66,7 @@ namespace SchoolManagement.Controllers
                           CourseName = c.CourseName,
                           StartDate = c.StartDate,
                           EndDate = c.EndDate,
+                          Year = c.AcademicYear.Year,
                           Lecturer = new LecturerOutputDTO
                           {
                               Email = c.Lecturer.Email,
@@ -97,6 +99,7 @@ namespace SchoolManagement.Controllers
                       .Include(c => c.Lecturer)
                       .Include(c => c.Shifts)
                       .Include(c => c.Scores)
+                      .Include(c => c.AcademicYear)
                       .Where(c => c.Lecturer.Id == userId)
                       .AsSplitQuery()
                       .Select(c => new CourseOutputGetDTO
@@ -105,6 +108,7 @@ namespace SchoolManagement.Controllers
                           CourseName = c.CourseName,
                           StartDate = c.StartDate,
                           EndDate = c.EndDate,
+                          Year = c.AcademicYear.Year,
                           Lecturer = new LecturerOutputDTO
                           {
                               Email = c.Lecturer.Email,
@@ -140,7 +144,7 @@ namespace SchoolManagement.Controllers
                       .Include(c => c.Lecturer)
                       .Include(c => c.Shifts)
                       .Where(c => c.Shifts.Any(s => _context.Enrollments.Any(e => e.ShiftId == s.ShiftId && e.UserId == userId)))
-                      //.Include(c => c.Scores)     
+                      .Include(c => c.AcademicYear)
                       .AsSplitQuery()
                       .Select(c => new CourseOutputGetDTO
                       {
@@ -148,6 +152,7 @@ namespace SchoolManagement.Controllers
                           CourseName = c.CourseName,
                           StartDate = c.StartDate,
                           EndDate = c.EndDate,
+                          Year = c.AcademicYear.Year,
                           Lecturer = new LecturerOutputDTO
                           {
                               Email = c.Lecturer.Email,
@@ -199,6 +204,7 @@ namespace SchoolManagement.Controllers
                 .OrderBy(c => c.CourseId)
                 .Include(c => c.Lecturer)
                 .Include(c => c.Shifts)
+                .Include(c => c.AcademicYear)
                 //.Include(c => c.Scores)     
                 .AsSplitQuery()
                 .ToListAsync(cancellationToken); // Load all courses first
@@ -221,6 +227,7 @@ namespace SchoolManagement.Controllers
                  CourseName = c.CourseName,
                  StartDate = c.StartDate,
                  EndDate = c.EndDate,
+                 Year = c.AcademicYear.Year,
                  Lecturer = new LecturerOutputDTO
                  {
                      Email = c.Lecturer.Email,
@@ -255,6 +262,7 @@ namespace SchoolManagement.Controllers
             .Include(c => c.Lecturer) // Bao gồm thông tin giảng viên
             .Include(c => c.Shifts)    // Bao gồm các shift liên quan
             .Include(c => c.Scores)     // Bao gồm các điểm số
+            .Include(c => c.AcademicYear)
             .Where(c => c.CourseId == id) // Tìm khóa học theo ID
             .AsSplitQuery()
             .Select(c => new CourseOutputGetDTO
@@ -263,7 +271,8 @@ namespace SchoolManagement.Controllers
                 CourseName = c.CourseName,
                 StartDate = c.StartDate,
                 EndDate = c.EndDate,
-                Lecturer= new LecturerOutputDTO
+                Year = c.AcademicYear.Year,
+                Lecturer = new LecturerOutputDTO
                 {
                     Email = c.Lecturer.Email,
                     LecturerId = c.LecturerId,
@@ -296,6 +305,24 @@ namespace SchoolManagement.Controllers
             if (course == null)
             {
                 return NotFound();
+            }
+
+            // Check if the user is a student
+            var isStudent = User.Claims.FirstOrDefault(c => c.Type.Contains("role"))?.Value == "Student";
+            //var userId = User.Identity.GetUserId();
+            string userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (isStudent)
+            {
+                // Filter shifts based on enrollment
+                var enrolledShifts = await _context.Enrollments
+                    .Include(e => e.Shift)
+                    .Where(e => e.UserId == userId && e.Shift.CourseId == id)
+                    .Select(e => e.ShiftId)
+                    .ToListAsync(cancellationToken);
+
+                // Filter the shifts in the course based on the enrolled shifts
+                course.Shifts = course.Shifts.Where(s => enrolledShifts.Contains(s.ShiftId)).ToList();
             }
 
             return course;
@@ -493,12 +520,22 @@ namespace SchoolManagement.Controllers
                 }
             }
 
+            var latestYear = await _context.AcademicYears
+                .OrderByDescending(y => y.CreatedAt)
+                .FirstOrDefaultAsync(y => !y.IsLocked);
+
+                    if (latestYear == null)
+                    {
+                        return BadRequest("Không có năm học nào đang mở. Vui lòng tạo năm học mới trước khi thêm khóa học.");
+                    }
+
             var course = new Course
             {
                 CourseName = courseDTO.CourseName,
                 StartDate = courseDTO.StartDate,
                 EndDate = courseDTO.EndDate,
-                LecturerId = courseDTO.LecturerId
+                LecturerId = courseDTO.LecturerId,
+                AcademicYearId = latestYear.AcademicYearId
             };
             _context.Courses.Add(course);
             await _context.SaveChangesAsync(cancellationToken);

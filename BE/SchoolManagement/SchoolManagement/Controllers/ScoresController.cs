@@ -34,13 +34,13 @@ namespace SchoolManagement.Controllers
               return NotFound();
           }
           var scores = await _context.Scores
-                //.Include(sc => sc.)
+                .Include(sc => sc.Course)
                 .Select(sc => new ScoreOuputDTO
                 {
                     UserId = sc.UserId,
                     StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
                     CourseName = sc.Course.CourseName,
-                    Year = sc.Course.StartDate.Year,
+                    Year = sc.Course.AcademicYear.Year,
                     Process1 = sc.Process1,
                     Process2 = sc.Process2,
                     Midterm = sc.Midterm,
@@ -100,6 +100,7 @@ namespace SchoolManagement.Controllers
                     UserId = sc.UserId,
                     StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
                     CourseName = sc.Course.CourseName,
+                    Year = sc.Course.AcademicYear.Year,
                     Process1 = sc.Process1,
                     Process2 = sc.Process2,
                     Midterm = sc.Midterm,
@@ -134,6 +135,7 @@ namespace SchoolManagement.Controllers
                     UserId = sc.UserId,
                     StudentName = sc.User.FirstName + ' ' + sc.User.LastName,
                     CourseName = sc.Course.CourseName,
+                    Year = sc.Course.AcademicYear.Year,
                     Process1 = sc.Process1,
                     Process2 = sc.Process2,
                     Midterm = sc.Midterm,

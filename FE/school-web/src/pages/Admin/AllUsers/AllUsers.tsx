@@ -73,17 +73,7 @@ const AllUsersPage: React.FC = () => {
     },[])
 
     // Row Data Interface
-    const [rowData, setRowData] = useState<IRowUser[]>([
-        {
-            id: '1',
-            firstName: 'Jane',
-            lastName: 'Doe',
-            roleName: ERole.Admin,
-            gender: EGender.Female,
-            email: 'janedoe@gmail,com',
-            dob: '20/01/2000'
-        },
-    ]);
+    const [rowData, setRowData] = useState<IRowUser[]>([]);
     
       // Column Definitions: Defines & controls grid columns.
     const [colDefs, setColDefs] = useState<ColDef<IRowUser>[]>([

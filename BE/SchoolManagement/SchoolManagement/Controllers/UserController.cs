@@ -72,21 +72,25 @@ namespace SchoolManagement.Controllers
             if (result.Succeeded)
             {
                 var user = await _userManager.FindByEmailAsync(loginDto.Email);
+                Console.WriteLine("user: " + user.RoleId);
                 var userRoles = await _userManager.GetRolesAsync(user);
-
+                Console.WriteLine("userRolessss: " + string.Join(", ", userRoles));
                 var authClaims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id),
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(ClaimTypes.Role, user.RoleId.ToString())
                 };
 
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
+                //foreach (var userRole in userRoles)
+                //{
+                    //authClaims.Add();
+                //}
 
                 var token = GetToken(authClaims);
+
+                
 
                 return Ok(new
                 {
@@ -94,6 +98,7 @@ namespace SchoolManagement.Controllers
                     expiration = token.ValidTo,
                     datetime = DateTime.Now
                 });
+
             }
 
             return Unauthorized(new { Message = "Invalid login attempt." });
