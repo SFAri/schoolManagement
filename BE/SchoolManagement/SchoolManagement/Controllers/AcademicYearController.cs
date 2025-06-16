@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using SchoolManagement.Helpers;
+using SchoolManagement.Hub;
 using SchoolManagement.Models;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -15,10 +18,12 @@ namespace SchoolManagement.Controllers
     public class AcademicYearController : ControllerBase
     {
         private readonly SchoolContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public AcademicYearController(SchoolContext context)
+        public AcademicYearController(SchoolContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet()]
@@ -47,6 +52,35 @@ namespace SchoolManagement.Controllers
 
             _context.AcademicYears.Add(newYear);
             await _context.SaveChangesAsync();
+
+            var allStudents = await _context.Users
+                .Where(u => u.RoleId == RoleType.Student)
+                .ToListAsync();
+
+            foreach (var student in allStudents)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = student.Id,
+                    Message = $"A new academic year {newYear.Year} has been created."
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            var studentIds = _context.Users
+                .Where(u => u.RoleId == RoleType.Student)
+                .Select(u => u.Id)
+                .ToList();
+            foreach (var studentId in studentIds)
+            {
+                 await NotificationHelper.NotifyAsync(
+                     _context,
+                     _hubContext,
+                     studentId,
+                     $"A new academic year '{newYear.Year}' has been created."
+                 );
+            }
             return Ok(newYear);
         }
 

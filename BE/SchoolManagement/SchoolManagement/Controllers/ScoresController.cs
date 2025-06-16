@@ -7,8 +7,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagement.DTO.ScoreDTO;
+using SchoolManagement.Helpers;
+using SchoolManagement.Hub;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -19,10 +22,12 @@ namespace SchoolManagement.Controllers
     public class ScoresController : ControllerBase
     {
         private readonly SchoolContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public ScoresController(SchoolContext context)
+        public ScoresController(SchoolContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // GET: api/Scores
@@ -243,6 +248,12 @@ namespace SchoolManagement.Controllers
             {
                 return NotFound();
             }
+            await NotificationHelper.NotifyAsync(
+                _context,
+                _hubContext,
+                score.UserId, // người nhận
+                $"Your grade in course {score.Course.CourseName} has been updated."
+            );
 
             return CreatedAtAction("GetScore", new { userId = score.UserId, courseId = score.CourseId }, scoreOutput.Value);
         }

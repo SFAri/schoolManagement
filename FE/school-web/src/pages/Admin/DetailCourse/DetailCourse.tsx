@@ -4,12 +4,9 @@ import ButtonCustom from "../../../component/Button/Button";
 import { ColDef } from "ag-grid-community";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { IRowShift } from "../../../types/IRowShift";
-import { EShiftCode } from "../../../types/EShiftCode";
-import { EWeekDay } from "../../../types/EWeekDay";
-import { Button, Divider, message, Progress, Space, Spin, Tabs, TabsProps } from "antd";
+import { Button, Divider, message, Progress, Spin, Tabs, TabsProps } from "antd";
 import './DetailCourse.css'
 import { useNavigate, useParams } from "react-router-dom";
-import EditDeleteButton from "../../../component/EditDeleteButton/EditDeleteButton";
 import CustomGridTable from "../../../component/GridTable/CustomGridTable";
 import { IDataGetCourse } from "../../../types/IDataGetCourse";
 import { FormatDate } from "../../../utils/formatDate";
@@ -23,12 +20,8 @@ import PieChart from "../../../component/Chart/PieChart";
 import BarChart from "../../../component/Chart/BarChart";
 import { ScheduleXCalendar } from "@schedule-x/react";
 import { createEventsServicePlugin } from "@schedule-x/events-service";
-import { useCalendarApp } from "@schedule-x/react";
 import { createViewWeek } from "@schedule-x/calendar";
-import { createViewMonthGrid } from "@schedule-x/calendar";
-import { createViewMonthAgenda } from "@schedule-x/calendar";
 import { viewWeek } from "@schedule-x/calendar";
-import { viewMonthGrid } from "@schedule-x/calendar";
 import { createCalendarControlsPlugin } from '@schedule-x/calendar-controls'
 import { createCalendar } from "@schedule-x/calendar";
 
@@ -105,16 +98,7 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
         }
     }
 
-    // Fetch data here: Student chỉ coi được các ca học mà nó đã đăng ký học
-    const [rowShiftData, setRowShiftData] = useState<IRowShift[]>([]);
-    
-      // Column Definitions: Defines & controls grid columns.
-    const [colShiftDefs, setColShiftDefs] = useState<ColDef<IRowShift>[]>([
-        { field: "shiftId", hide: true},
-        { field: "weekDay"},
-        { field: "shiftOfDay", filter:true},
-        { field: "maxQuantity"}
-    ]);
+
 
     // Data for mark: Nếu là student thì chỉ cho nó xem điểm của nó thôi -> fetch điểm của nó vào đây
     const [markData, setMarkData] = useState<any[]>([]);
@@ -135,18 +119,18 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
         flex: 1,
     };
 
-    const handleDelete = async (data: IRowShift) => {
-        try {
-            const result = await deleteReq<IRowShift>('/Shifts/' + data.shiftId);
-            console.log('Shift deleted:', result);
-            msg.success(`Delete Shift: ${data.weekDay} - ${data.shiftOfDay}`)
-            reloadData();
-        }
-        catch(error: any){
-            console.log("Error while deleting shift: ", error)
-            msg.error(`Error while deleting Shift: ${error?.response?.data}`)
-        }
-    };
+    // const handleDelete = async (data: IRowShift) => {
+    //     try {
+    //         const result = await deleteReq<IRowShift>('/Shifts/' + data.shiftId);
+    //         console.log('Shift deleted:', result);
+    //         msg.success(`Delete Shift: ${data.weekDay} - ${data.shiftOfDay}`)
+    //         reloadData();
+    //     }
+    //     catch(error: any){
+    //         console.log("Error while deleting shift: ", error)
+    //         msg.error(`Error while deleting Shift: ${error?.response?.data}`)
+    //     }
+    // };
 
     const handleBack = ():void =>{
         navigator(-1);
@@ -159,7 +143,6 @@ const DetailCoursePage: React.FC<{role: string}> = ({role}) => {
             const result = await getReq<IDataGetCourse>('/Courses/' + id, {});
             if (result !== null){
                 setData(result)
-                setRowShiftData(result.shifts);
                 let scores = result.scores.map((score : IScore) => {
                     return {
                         userId : score.userId,

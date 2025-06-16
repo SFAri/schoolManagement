@@ -9,12 +9,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SchoolManagement.DTO;
 using SchoolManagement.DTO.CourseDTO;
 using SchoolManagement.DTO.ScoreDTO;
 using SchoolManagement.DTO.ShiftDTO;
 using SchoolManagement.DTO.UserDTO;
+using SchoolManagement.Helpers;
+using SchoolManagement.Hub;
 using SchoolManagement.Models;
 
 namespace SchoolManagement.Controllers
@@ -25,10 +28,12 @@ namespace SchoolManagement.Controllers
     public class CoursesController : ControllerBase
     {
         private readonly SchoolContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public CoursesController(SchoolContext context)
+        public CoursesController(SchoolContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // GET: api/Courses
@@ -567,6 +572,13 @@ namespace SchoolManagement.Controllers
                 return NotFound(); // Trả về không tìm thấy
             }
 
+            await NotificationHelper.NotifyAsync(
+                _context,
+                _hubContext,
+                lecturerId,
+                $"You have been assigned as the lecturer for new course '{course.CourseName}'."
+            );
+
             return CreatedAtAction("GetCourse", new { id = course.CourseId }, courseOutput.Value);
         }
 
@@ -687,6 +699,13 @@ namespace SchoolManagement.Controllers
 
                     // Commit the transaction
                     transaction.Commit();
+
+                    await NotificationHelper.NotifyAsync(
+                        _context,
+                        _hubContext,
+                        course.LecturerId,
+                        $"A student has registered for your course '{course.CourseName}'."
+                    );
 
                     return Ok("Successfully joined course");
                 }

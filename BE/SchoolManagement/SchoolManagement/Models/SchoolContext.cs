@@ -248,5 +248,6 @@ namespace SchoolManagement.Models
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Score> Scores { get; set; }
         public DbSet<AcademicYear> AcademicYears { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
     }
 }

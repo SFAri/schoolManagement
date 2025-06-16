@@ -1,10 +1,10 @@
 import * as React from 'react';
 import "antd/dist/reset.css";
 import "./index.css";
-import { Avatar, Button, Dropdown, Layout, Menu, MenuProps} from "antd";
+import { Avatar, Dropdown, Layout, Menu, MenuProps} from "antd";
 import './assets/styles/global.css';
 import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community'; 
-import { ApartmentOutlined, BookFilled, DownOutlined, LockFilled, LogoutOutlined, NumberOutlined, ProfileFilled, ScheduleFilled, UserOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, BookFilled, DownOutlined, LockFilled, LogoutOutlined, NumberOutlined, ProfileFilled, ScheduleFilled } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ROUTERS } from './utils/router';
 import { LicenseManager, TreeDataModule, ExcelExportModule } from "ag-grid-enterprise";
@@ -14,6 +14,8 @@ import ModalChangePass from './component/ModalChangePass/ModalChangePass';
 import { useAuth } from './hooks/useAuth';
 import useMessage from 'antd/es/message/useMessage';
 import logo from './assets/images/logo.png';
+import '@ant-design/v5-patch-for-react-19';
+import NotificationBell from './component/NotificationBell/NotificationBell';
 
 
 // Register all Community features
@@ -114,7 +116,6 @@ const App: React.FC<Props> = ({children, role, selected="1"}) => {
             </Menu.Item>
         </Menu>
     );
-    
   
 
   return(
@@ -153,6 +154,7 @@ const App: React.FC<Props> = ({children, role, selected="1"}) => {
                     <DownOutlined style={{ marginLeft: 8 }} />
                 </span>
             </Dropdown>
+            <NotificationBell userId={user.id}/>
           </Header>
           <Content style={{ margin: "24px 16px 0" }}>
             <div

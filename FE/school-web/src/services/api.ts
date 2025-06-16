@@ -22,6 +22,15 @@ export const postReq = async<T> (url: string, data: Record<string, unknown>, sig
     return response.data;
 };
 
+export const putReq = async<T> (url: string, data: Record<string, unknown>, signal?: AbortSignal): Promise<T> => {
+    const config: AxiosRequestConfig = {
+        signal
+    };
+
+    const response = await axios.put<T>(url, data, config);
+    return response.data;
+};
+
 export const patchReq = async<T> (url: string, data: Record<string, unknown>, signal?: AbortSignal): Promise<T> => {
     const config: AxiosRequestConfig = {
         signal
